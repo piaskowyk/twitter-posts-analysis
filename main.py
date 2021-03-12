@@ -6,6 +6,7 @@
 
 import os
 import requests
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -57,3 +58,7 @@ response = requests.get(
 )
 
 print(response.json())
+
+file = open("json.json", "w")
+file.write(json.dumps(response.json()))
+file.close()
