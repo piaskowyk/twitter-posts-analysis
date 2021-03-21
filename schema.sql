@@ -13,6 +13,10 @@ CREATE TABLE public.tweet (
 	tags text NULL,
 	user_id int8 NULL,
 	created_at timestamp(0) NULL,
+	sentiment_neg float4 NULL,
+	sentiment_neu float4 NULL,
+	sentiment_pos float4 NULL,
+	sentiment_compound float4 NULL,
 	CONSTRAINT tweet_pk PRIMARY KEY (id)
 );
 

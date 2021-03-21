@@ -1,9 +1,12 @@
 import psycopg2
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 
 class Database:
     connection = None
     db = None
+    sentiment_analyzer = None
 
     def __init__(self):
         self.connection = psycopg2.connect(
@@ -14,6 +17,8 @@ class Database:
             port="5432"
         )
         self.db = self.connection.cursor()
+        nltk.download('vader_lexicon')
+        self.sentiment_analyzer = SentimentIntensityAnalyzer()
 
     def __del__(self):
         self.db.close()
@@ -36,11 +41,15 @@ class Database:
                     tags = tag['text']
                 else:
                     tags += ',' + tag['text']
+            sentiment_result = self.sentiment_analyzer.polarity_scores(tweet['full_text'])
             self.db.execute(
                 'INSERT INTO tweet '
-                '(id, content, user_id, created_at, tags) '
-                'VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
-                (tweet['id'], tweet['full_text'], tweet['user_id'], tweet['created_at'], tags)
+                '(id, content, user_id, created_at, tags, '
+                'sentiment_neg, sentiment_neu, sentiment_pos, sentiment_compound) '
+                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
+                (tweet['id'], tweet['full_text'], tweet['user_id'], tweet['created_at'], tags,
+                 sentiment_result['neg'], sentiment_result['neu'],
+                 sentiment_result['pos'], sentiment_result['compound'])
             )
         self.connection.commit()
 
