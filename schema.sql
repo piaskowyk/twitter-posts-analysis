@@ -12,6 +12,7 @@ CREATE TABLE public.tweet (
 	"content" text NULL,
 	tags text NULL,
 	user_id int8 NULL,
+	created_at timestamp(0) NULL,
 	CONSTRAINT tweet_pk PRIMARY KEY (id)
 );
 
