@@ -16,7 +16,9 @@ query = "covid"
 class Twitter:
     config = None
     config_file = None
-    scroll_pointer = None
+    mode = 0
+    scroll_pointer_latest = None
+    scroll_pointer_historical = None
     database: Database = None
     interval = 15  # to avoid block by twitter
     params = {
@@ -52,6 +54,8 @@ class Twitter:
     def __init__(self):
         self.config_file = open("config.json", "r")
         self.config = json.loads(self.config_file.read())
+        self.scroll_pointer_historical = self.config['scroll_pointer_historical']
+        self.scroll_pointer_latest = self.config['scroll_pointer_latest']
         self.config_file.close()
         self.config_file = open("config.json", "w")
         self.database = Database()
@@ -60,8 +64,10 @@ class Twitter:
         self.config_file.close()
 
     def make_request(self):
-        if self.scroll_pointer:
-            self.params['cursor'] = self.scroll_pointer
+        if self.mode == 0 and self.scroll_pointer_historical:
+            self.params['cursor'] = self.scroll_pointer_historical
+        elif self.mode == 1 and self.scroll_pointer_latest:
+            self.params['cursor'] = self.scroll_pointer_latest
         response = requests.get(
             "https://twitter.com/i/api/2/search/adaptive.json",
             params=self.params,
@@ -76,22 +82,29 @@ class Twitter:
         return json_data
 
     def set_scroll_cursor(self, json_data):
+        scroll_pointer = None
         if len(json_data['timeline']['instructions']) > 2:
-            self.scroll_pointer = json_data['timeline']['instructions'][3]['replaceEntry']['entry']['content']['operation']['cursor'][
+            scroll_pointer = json_data['timeline']['instructions'][3]['replaceEntry']['entry']['content']['operation']['cursor'][
                 'value']
         else:
             entities_ = json_data['timeline']['instructions'][0]['addEntries']['entries']
-            self.scroll_pointer = entities_[len(entities_) - 1]['content']['operation']['cursor']['value']
+            scroll_pointer = entities_[len(entities_) - 1]['content']['operation']['cursor']['value']
+
+        if self.mode == 0:
+            self.scroll_pointer_historical = scroll_pointer
+        elif self.mode == 1:
+            self.scroll_pointer_latest = scroll_pointer
         self.update_config()
 
     def update_config(self):
         self.config_file.seek(0)
-        self.config['scroll_pointer'] = self.scroll_pointer
+        self.config['scroll_pointer_historical'] = self.scroll_pointer_historical
+        self.config['scroll_pointer_latest'] = self.scroll_pointer_latest
         self.config_file.write(json.dumps(self.config))
 
     def get_latest(self):
         print("[start] get_latest")
-        self.scroll_pointer = None
+        self.mode = 1
         while True:
             json_data = self.make_request()
             self.database.insert_twitter_batch(json_data)
@@ -105,7 +118,7 @@ class Twitter:
 
     def get_historical(self, count=None):
         print("[start] get_historical")
-        self.scroll_pointer = self.config['scroll_pointer']
+        self.mode = 0
         if count is not None:
             for i in range(count):
                 self.database.insert_twitter_batch(self.make_request())
