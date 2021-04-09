@@ -17,6 +17,12 @@ CREATE TABLE public.tweet (
 	sentiment_neu float4 NULL,
 	sentiment_pos float4 NULL,
 	sentiment_compound float4 NULL,
+	retweet_count int4 NULL,
+	favorite_count int4 NULL,
+	reply_count int4 NULL,
+	quote_count int4 NULL,
+	reply_to int8 NULL,
+	fetched_comments bool NULL,
 	CONSTRAINT tweet_pk PRIMARY KEY (id)
 );
 

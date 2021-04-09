@@ -19,6 +19,7 @@ class Twitter:
     mode = 0
     scroll_pointer_latest = None
     scroll_pointer_historical = None
+    scroll_pointer_comment = None
     database: Database = None
     interval = 15  # to avoid block by twitter
     params = {
@@ -50,6 +51,7 @@ class Twitter:
         "spelling_corrections": 1,
         "ext": "mediaStats%2ChighlightedLabel"
     }
+    headers = {}
 
     def __init__(self):
         self.config_file = open("config.json", "r")
@@ -59,8 +61,14 @@ class Twitter:
         self.config_file.close()
         self.config_file = open("config.json", "w")
         self.database = Database()
+        self.headers = {
+            "authorization": AUTHORIZATION,
+            "x-csrf-token": CRSF_TOKEN,
+            "cookie": f'auth_token={COOKIES_AUTH_TOKEN}; ct0={COOKIES_CT0};'
+        }
 
     def __del__(self):
+        self.update_config()
         self.config_file.close()
 
     def make_request(self):
@@ -71,30 +79,33 @@ class Twitter:
         response = requests.get(
             "https://twitter.com/i/api/2/search/adaptive.json",
             params=self.params,
-            headers={
-                "authorization": AUTHORIZATION,
-                "x-csrf-token": CRSF_TOKEN,
-                "cookie": f'auth_token={COOKIES_AUTH_TOKEN}; ct0={COOKIES_CT0};'
-            },
+            headers=self.headers,
         )
         json_data = response.json()
         self.set_scroll_cursor(json_data)
         return json_data
 
-    def set_scroll_cursor(self, json_data):
-        scroll_pointer = None
+    def set_scroll_cursor(self, json_data, is_comment=False):
         if len(json_data['timeline']['instructions']) > 2:
             scroll_pointer = json_data['timeline']['instructions'][3]['replaceEntry']['entry']['content']['operation']['cursor'][
                 'value']
         else:
             entities_ = json_data['timeline']['instructions'][0]['addEntries']['entries']
+            if len(entities_) == 1:
+                return False
+            if 'operation' not in entities_[len(entities_) - 1]['content']:
+                return False
             scroll_pointer = entities_[len(entities_) - 1]['content']['operation']['cursor']['value']
 
-        if self.mode == 0:
+        if is_comment:
+            self.scroll_pointer_comment = scroll_pointer
+        elif self.mode == 0:
             self.scroll_pointer_historical = scroll_pointer
+            self.update_config()
         elif self.mode == 1:
             self.scroll_pointer_latest = scroll_pointer
-        self.update_config()
+            self.update_config()
+        return True
 
     def update_config(self):
         self.config_file.seek(0)
@@ -107,14 +118,15 @@ class Twitter:
         self.mode = 1
         while True:
             json_data = self.make_request()
-            self.database.insert_twitter_batch(json_data)
             tweets = list(json_data['globalObjects']['tweets'].values())
             last_tweet = tweets[len(tweets) - 1]
             print("[start] progress")
-            if self.database.exists_tweet(last_tweet[id]):
+            if self.database.exists_tweet(last_tweet['id']):
                 print("[finish] get_latest")
                 return
+            self.database.insert_twitter_batch(json_data)
             time.sleep(self.interval)
+            self.get_comments()
 
     def get_historical(self, count=None):
         print("[start] get_historical")
@@ -124,9 +136,39 @@ class Twitter:
                 self.database.insert_twitter_batch(self.make_request())
                 print("[progress] get_historical")
                 time.sleep(self.interval)
+                self.get_comments()
         else:
             while True:
                 self.database.insert_twitter_batch(self.make_request())
                 print("[progress] get_historical")
                 time.sleep(self.interval)
+                self.get_comments()
         print("[finish] get_historical")
+
+    def make_comment_request(self, tweet_id):
+        params = self.params.copy()
+        if self.scroll_pointer_comment:
+            params['cursor'] = self.scroll_pointer_comment
+        response = requests.get(
+            f"https://twitter.com/i/api/2/timeline/conversation/{tweet_id}.json",
+            params=params,
+            headers=self.headers,
+        )
+        json_data = response.json()
+        if 'errors' in json_data:
+            return None, False
+        is_next = self.set_scroll_cursor(json_data, True)
+        return json_data, is_next
+
+    def get_comments(self):
+        print("[start] get_comments")
+        tweets = self.database.get_tweets_to_comment_fetch()
+        for tweet in tweets:
+            while True:
+                json_data, is_next = self.make_comment_request(tweet[0])
+                time.sleep(self.interval)
+                if not is_next or len(list(json_data['globalObjects']['tweets'].values())) <= 1:
+                    self.scroll_pointer_comment = None
+                    break
+                self.database.insert_twitter_batch(json_data)
+                print("[progress] get_comments")
