@@ -1,5 +1,6 @@
 import psycopg2
 import nltk
+import re
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 
@@ -43,19 +44,24 @@ class Database:
                         tags = tag['text']
                     else:
                         tags += ',' + tag['text']
-            sentiment_result = self.sentiment_analyzer.polarity_scores(tweet['full_text'])
+            regex = r"\@[\w]*"
+            clear_tweet = re.sub(regex, '', tweet['full_text'], 0, re.MULTILINE)
+            sentiment_result = self.sentiment_analyzer.polarity_scores(clear_tweet)
             reply_to = tweet.get('in_reply_to_status_id_str', None)
             tweet_id = tweet.get('id', tweet['id_str'])
             user_id = tweet.get('user_id', tweet['user_id_str'])
+            fetched_comments = True if reply_to else None
             self.db.execute(
                 'INSERT INTO tweet '
                 '(id, content, user_id, created_at, tags, sentiment_neg, sentiment_neu, sentiment_pos, '
-                'sentiment_compound, retweet_count, favorite_count, reply_count, quote_count, reply_to) '
-                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
+                'sentiment_compound, retweet_count, favorite_count, reply_count, quote_count, reply_to, '
+                'fetched_comments) '
+                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
                 (tweet_id, tweet['full_text'], user_id, tweet['created_at'], tags,
                  sentiment_result['neg'], sentiment_result['neu'],
                  sentiment_result['pos'], sentiment_result['compound'],
-                 tweet['retweet_count'], tweet['favorite_count'], tweet['reply_count'], tweet['quote_count'], reply_to)
+                 tweet['retweet_count'], tweet['favorite_count'], tweet['reply_count'], tweet['quote_count'],
+                 reply_to, fetched_comments)
             )
         self.connection.commit()
 
@@ -66,3 +72,7 @@ class Database:
     def get_tweets_to_comment_fetch(self):
         self.db.execute("SELECT * FROM tweet WHERE fetched_comments is NULL")
         return self.db.fetchall()
+
+    def set_as_fetched_comments(self, tweet):
+        self.db.execute(f"update tweet set fetched_comments = true where id = {tweet[0]} and reply_to is NULL")
+        self.connection.commit()

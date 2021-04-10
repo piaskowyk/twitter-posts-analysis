@@ -4,6 +4,7 @@ import json
 import time
 from database import Database
 from dotenv import load_dotenv
+
 load_dotenv()
 
 AUTHORIZATION = os.getenv('AUTHORIZATION', '')
@@ -21,7 +22,7 @@ class Twitter:
     scroll_pointer_historical = None
     scroll_pointer_comment = None
     database: Database = None
-    interval = 15  # to avoid block by twitter
+    interval = 10  # to avoid block by twitter
     params = {
         "include_profile_interstitial_type": 1,
         "include_blocking": 1,
@@ -60,6 +61,7 @@ class Twitter:
         self.scroll_pointer_latest = self.config['scroll_pointer_latest']
         self.config_file.close()
         self.config_file = open("config.json", "w")
+        self.update_config()
         self.database = Database()
         self.headers = {
             "authorization": AUTHORIZATION,
@@ -87,9 +89,12 @@ class Twitter:
 
     def set_scroll_cursor(self, json_data, is_comment=False):
         if len(json_data['timeline']['instructions']) > 2:
-            scroll_pointer = json_data['timeline']['instructions'][3]['replaceEntry']['entry']['content']['operation']['cursor'][
+            scroll_pointer = \
+            json_data['timeline']['instructions'][3]['replaceEntry']['entry']['content']['operation']['cursor'][
                 'value']
         else:
+            if 'addEntries' not in json_data['timeline']['instructions'][0]:
+                return False
             entities_ = json_data['timeline']['instructions'][0]['addEntries']['entries']
             if len(entities_) == 1:
                 return False
@@ -164,11 +169,24 @@ class Twitter:
         print("[start] get_comments")
         tweets = self.database.get_tweets_to_comment_fetch()
         for tweet in tweets:
+            if tweet[11] == 0:
+                self.database.set_as_fetched_comments(tweet)
+                continue
             while True:
                 json_data, is_next = self.make_comment_request(tweet[0])
+                print("[progress] get_comments")
                 time.sleep(self.interval)
-                if not is_next or len(list(json_data['globalObjects']['tweets'].values())) <= 1:
+                if not json_data \
+                        or 'globalObjects' not in json_data \
+                        or 'tweets' not in json_data['globalObjects'] \
+                        or not json_data['globalObjects']['tweets'] \
+                        or len(list(json_data['globalObjects']['tweets'].values())) <= 1:
                     self.scroll_pointer_comment = None
                     break
-                self.database.insert_twitter_batch(json_data)
-                print("[progress] get_comments")
+                else:
+                    self.database.insert_twitter_batch(json_data)
+
+                if not is_next:
+                    self.scroll_pointer_comment = None
+                    break
+            self.database.set_as_fetched_comments(tweet)
