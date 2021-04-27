@@ -1,4 +1,5 @@
 import psycopg2
+import psycopg2.extras
 import nltk
 import re
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -17,7 +18,7 @@ class Database:
             host="127.0.0.1",
             port="5432"
         )
-        self.db = self.connection.cursor()
+        self.db = self.connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         nltk.download('vader_lexicon')
         self.sentiment_analyzer = SentimentIntensityAnalyzer()
 
@@ -25,15 +26,9 @@ class Database:
         self.db.close()
         self.connection.close()
 
-    def insert_twitter_batch(self, json_data):
+    def insert_twitter_batch(self, json_data, tweet_type=1):
         for user in json_data['globalObjects']['users'].values():
-            user_id = user.get('id', user['id_str'])
-            self.db.execute(
-                'INSERT INTO "user" '
-                '(id, name, location, description, followers_count) '
-                'VALUES(%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
-                (user_id, user['name'], user['location'], user['description'], user['followers_count'])
-            )
+            self.insert_user(user)
         self.connection.commit()
 
         for tweet in json_data['globalObjects']['tweets'].values():
@@ -55,13 +50,36 @@ class Database:
                 'INSERT INTO tweet '
                 '(id, content, user_id, created_at, tags, sentiment_neg, sentiment_neu, sentiment_pos, '
                 'sentiment_compound, retweet_count, favorite_count, reply_count, quote_count, reply_to, '
-                'fetched_comments) '
-                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
-                (tweet_id, tweet['full_text'], user_id, tweet['created_at'], tags,
+                'fetched_comments, type) '
+                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
+                (tweet_id, clear_tweet, user_id, tweet['created_at'], tags,
                  sentiment_result['neg'], sentiment_result['neu'],
                  sentiment_result['pos'], sentiment_result['compound'],
                  tweet['retweet_count'], tweet['favorite_count'], tweet['reply_count'], tweet['quote_count'],
-                 reply_to, fetched_comments)
+                 reply_to, fetched_comments, tweet_type)
+            )
+        self.connection.commit()
+
+    def insert_user(self, user):
+        user_id = user.get('id', user.get('id_str', user['rest_id']))
+        self.db.execute(
+            'INSERT INTO "user" '
+            '(id, name, location, description, followers_count, friends_count, media_count, favourites_count) '
+            'VALUES(%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
+            (user_id, user['name'], user['location'], user['description'], user['followers_count'],
+             user['friends_count'], user['media_count'], user['favourites_count'])
+        )
+
+    def insert_retweet_batch(self, retweets_json, tweet):
+        retweets = retweets_json['data']['retweeters_timeline']['timeline']['instructions'][0]['entries']
+        for retweet in retweets:
+            user = retweet['content']['itemContent']['user']['legacy']
+            self.insert_user(user)
+            user_id = user['rest_id']
+            tweet_id = tweet['id']
+            self.db.execute(
+                'insert into retweet (user_id, tweet_id) values (%s, %s) ON CONFLICT DO NOTHING',
+                (user_id, tweet_id)
             )
         self.connection.commit()
 
@@ -70,9 +88,41 @@ class Database:
         return self.db.fetchone() is not None
 
     def get_tweets_to_comment_fetch(self):
-        self.db.execute("SELECT * FROM tweet WHERE fetched_comments is NULL")
+        self.db.execute("SELECT * FROM tweet WHERE reply_to is null and fetched_comments is NULL")
+        return self.db.fetchall()
+
+    def get_tweets_to_retweet_fetch(self):
+        self.db.execute("SELECT * FROM tweet WHERE reply_to is null and fetched_retweets is NULL")
+        return self.db.fetchall()
+
+    def get_tweets_to_quote_fetch(self):
+        self.db.execute("SELECT * FROM tweet WHERE reply_to is null and fetched_quotes is NULL")
         return self.db.fetchall()
 
     def set_as_fetched_comments(self, tweet):
-        self.db.execute(f"update tweet set fetched_comments = true where id = {tweet[0]} and reply_to is NULL")
+        self.db.execute(f"update tweet set fetched_comments = true where id = {tweet['id']} and reply_to is NULL")
+        self.connection.commit()
+
+    def set_as_fetched_retweets(self, tweet):
+        self.db.execute(f"update tweet set fetched_retweets = true where id = {tweet['id']} and reply_to is NULL")
+        self.connection.commit()
+
+    def set_as_fetched_quotes(self, tweet):
+        self.db.execute(f"update tweet set fetched_quotes = true where id = {tweet['id']} and reply_to is NULL")
+        self.connection.commit()
+
+    def get_last_date(self):
+        self.db.execute('select * from "cursor" c order by c."date" desc limit 1')
+        return self.db.fetchone()
+
+    def get_cursors(self):
+        self.db.execute('select * from "cursor" c order by c."date" desc')
+        return self.db.fetchall()
+
+    def create_cursor(self, date):
+        self.db.execute('insert into "cursor" ("date") values (%s)', date)
+        self.connection.commit()
+
+    def set_cursor(self, date, cursor, count):
+        self.db.execute('update "cursor" set "cursor" = %s, "count" = %s where "date" = %s', cursor, count, date)
         self.connection.commit()

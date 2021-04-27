@@ -27,3 +27,19 @@ CREATE TABLE public.tweet (
 );
 
 ALTER TABLE public.tweet ADD CONSTRAINT fk_tweet_user null;
+
+CREATE TABLE public."cursor" (
+	id serial NOT NULL,
+	"date" date NULL,
+	"cursor" varchar NULL,
+	count int4 NULL DEFAULT 0,
+	CONSTRAINT cursor_pk PRIMARY KEY (id)
+);
+
+CREATE SEQUENCE cursor_id_seq;
+
+ALTER SEQUENCE cursor_id_seq OWNED BY "cursor".id;
+
+INSERT INTO public."cursor"
+(id, "date", "cursor", count)
+VALUES(1, '2020-03-01', NULL, 0);
