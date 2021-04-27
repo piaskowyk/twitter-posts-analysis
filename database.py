@@ -61,7 +61,7 @@ class Database:
         self.connection.commit()
 
     def insert_user(self, user):
-        user_id = user.get('id', user.get('id_str', user['rest_id']))
+        user_id = user.get('id', user.get('id_str', user.get('rest_id', 0)))
         self.db.execute(
             'INSERT INTO "user" '
             '(id, name, location, description, followers_count, friends_count, media_count, favourites_count) '

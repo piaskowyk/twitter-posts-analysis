@@ -19,6 +19,7 @@ class Twitter:
     config_file = None
     mode = 0
     scroll_pointer_comment = None
+    scroll_pointer_quote = None
     database: Database = None
     interval = 5  # to avoid block by twitter
     params = {
@@ -44,7 +45,7 @@ class Twitter:
         "send_error_codes": "true",
         "simple_quoted_tweet": "true",
         "q": query,
-        "count": 20,
+        "count": 30,
         "query_source": "typed_query",
         "pc": 1,
         "spelling_corrections": 1,
@@ -77,7 +78,21 @@ class Twitter:
         self.set_scroll_cursor(json_data, cursor)
         return json_data
 
-    def set_scroll_cursor(self, json_data, cursor=None, is_comment=False):
+    def make_quote_request(self, tweet):
+        params = self.params.copy()
+        if self.scroll_pointer_comment:
+            params['cursor'] = self.scroll_pointer_quote
+        params['q'] = f'quoted_tweet_id:{tweet["id"]}'
+        response = requests.get(
+            "https://twitter.com/i/api/2/search/adaptive.json",
+            params=self.params,
+            headers=self.headers,
+        )
+        json_data = response.json()
+        is_next = self.set_scroll_cursor(json_data, is_quote=True)
+        return json_data, is_next
+
+    def set_scroll_cursor(self, json_data, cursor=None, is_comment=False, is_quote=False):
         if len(json_data['timeline']['instructions']) > 2:
             scroll_pointer = \
                 json_data['timeline']['instructions'][3]['replaceEntry']['entry']['content']['operation']['cursor'][
@@ -94,6 +109,8 @@ class Twitter:
 
         if is_comment:
             self.scroll_pointer_comment = scroll_pointer
+        elif is_quote:
+            self.scroll_pointer_quote = scroll_pointer
         else:
             self.update_config(cursor)
         return True
@@ -170,11 +187,7 @@ class Twitter:
                 json_data, is_next = self.make_comment_request(tweet['id'])
                 print("[progress] get_comments")
                 time.sleep(self.interval)
-                if not json_data \
-                        or 'globalObjects' not in json_data \
-                        or 'tweets' not in json_data['globalObjects'] \
-                        or not json_data['globalObjects']['tweets'] \
-                        or len(list(json_data['globalObjects']['tweets'].values())) <= 1:
+                if self.end_of_data(json_data):
                     self.scroll_pointer_comment = None
                     break
                 else:
@@ -200,5 +213,31 @@ class Twitter:
             self.database.insert_retweet_batch(json_data, tweet)
             self.database.set_as_fetched_comments(tweet)
 
-    def get_cite(self):
-        pass # todo
+    def get_quotes(self):
+        print("[start] get_cite")
+        tweets = self.database.get_tweets_to_quote_fetch()
+        for tweet in tweets:
+            if tweet['quote_count'] == 0:
+                self.database.set_as_fetched_quotes(tweet)
+                continue
+            while True:
+                json_data, is_next = self.make_comment_request(tweet['id'])
+                print("[progress] get_comments")
+                time.sleep(self.interval)
+                if self.end_of_data(json_data):
+                    self.scroll_pointer_quote = None
+                    break
+                else:
+                    self.database.insert_twitter_batch(json_data, 3)
+
+                if not is_next:
+                    self.scroll_pointer_quote = None
+                    break
+            self.database.set_as_fetched_quotes(tweet)
+
+    def end_of_data(self, json_data):
+        return not json_data \
+                        or 'globalObjects' not in json_data \
+                        or 'tweets' not in json_data['globalObjects'] \
+                        or not json_data['globalObjects']['tweets'] \
+                        or len(list(json_data['globalObjects']['tweets'].values())) <= 1
