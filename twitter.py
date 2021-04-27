@@ -68,7 +68,7 @@ class Twitter:
         if cursor['cursor']:
             self.params['cursor'] = cursor['cursor']
         if cursor['date']:
-            self.params['q'] = query + " until:" + cursor['date']
+            self.params['q'] = query + " until:" + str(cursor['date'])
         response = requests.get(
             "https://twitter.com/i/api/2/search/adaptive.json",
             params=self.params,
@@ -134,6 +134,7 @@ class Twitter:
         for cursor in cursors:
             print("[progress] step, " + str(cursor))
             self.database.insert_twitter_batch(self.make_request(cursor), 1)
+            time.sleep(self.interval)
 
     def fill_cursors(self):
         last_cursor_date = self.database.get_last_date()['date']
@@ -164,7 +165,7 @@ class Twitter:
         response = requests.get(
             f"https://twitter.com/i/api/graphql/QajDfWfS6ycxxO8uK271hQ/Retweeters",
             params={
-                "variables": '{"tweetId":"' + tweet_id +
+                "variables": '{"tweetId":"' + str(tweet_id) +
                              '","count":1000,"withHighlightedLabel":false,"withTweetQuoteCount":false,'
                              '"includePromotedContent":true,"withTweetResult":false,"withUserResults":false,'
                              '"withNonLegacyCard":true}'
@@ -214,7 +215,7 @@ class Twitter:
             self.database.set_as_fetched_comments(tweet)
 
     def get_quotes(self):
-        print("[start] get_cite")
+        print("[start] get_quotes")
         tweets = self.database.get_tweets_to_quote_fetch()
         for tweet in tweets:
             if tweet['quote_count'] == 0:
@@ -222,7 +223,7 @@ class Twitter:
                 continue
             while True:
                 json_data, is_next = self.make_comment_request(tweet['id'])
-                print("[progress] get_comments")
+                print("[progress] get_quotes")
                 time.sleep(self.interval)
                 if self.end_of_data(json_data):
                     self.scroll_pointer_quote = None

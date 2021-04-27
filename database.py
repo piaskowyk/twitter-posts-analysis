@@ -60,22 +60,28 @@ class Database:
             )
         self.connection.commit()
 
-    def insert_user(self, user):
-        user_id = user.get('id', user.get('id_str', user.get('rest_id', 0)))
+    def insert_user(self, user, user_id_=None):
+        if user_id_:
+            user_id = user_id_
+        else:
+            user_id = user.get('id', user.get('id_str', 0))
         self.db.execute(
             'INSERT INTO "user" '
             '(id, name, location, description, followers_count, friends_count, media_count, favourites_count) '
-            'VALUES(%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
+            'VALUES(%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING',
             (user_id, user['name'], user['location'], user['description'], user['followers_count'],
              user['friends_count'], user['media_count'], user['favourites_count'])
         )
 
     def insert_retweet_batch(self, retweets_json, tweet):
-        retweets = retweets_json['data']['retweeters_timeline']['timeline']['instructions'][0]['entries']
+        instructions = retweets_json['data']['retweeters_timeline']['timeline']['instructions']
+        if len(instructions) == 0:
+            return
+        retweets = instructions[0]['entries']
         for retweet in retweets:
-            user = retweet['content']['itemContent']['user']['legacy']
-            self.insert_user(user)
+            user = retweet['content']['itemContent']['user']
             user_id = user['rest_id']
+            self.insert_user(user['legacy'], user_id)
             tweet_id = tweet['id']
             self.db.execute(
                 'insert into retweet (user_id, tweet_id) values (%s, %s) ON CONFLICT DO NOTHING',
@@ -120,9 +126,9 @@ class Database:
         return self.db.fetchall()
 
     def create_cursor(self, date):
-        self.db.execute('insert into "cursor" ("date") values (%s)', date)
+        self.db.execute('insert into "cursor" ("date") values (%s)', [date])
         self.connection.commit()
 
     def set_cursor(self, date, cursor, count):
-        self.db.execute('update "cursor" set "cursor" = %s, "count" = %s where "date" = %s', cursor, count, date)
+        self.db.execute('update "cursor" set "cursor" = %s, "count" = %s where "date" = %s', [cursor, count, date])
         self.connection.commit()
