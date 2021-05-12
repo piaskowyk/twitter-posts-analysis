@@ -21,7 +21,7 @@ class Twitter:
     scroll_pointer_comment = None
     scroll_pointer_quote = None
     database: Database = None
-    interval = 5  # to avoid block by twitter
+    interval = 1  # to avoid block by twitter
     params = {
         "include_profile_interstitial_type": 1,
         "include_blocking": 1,
@@ -78,11 +78,11 @@ class Twitter:
         self.set_scroll_cursor(json_data, cursor)
         return json_data
 
-    def make_quote_request(self, tweet):
+    def make_quote_request(self, tweet_id):
         params = self.params.copy()
         if self.scroll_pointer_comment:
             params['cursor'] = self.scroll_pointer_quote
-        params['q'] = f'quoted_tweet_id:{tweet["id"]}'
+        params['q'] = f'quoted_tweet_id:{tweet_id}'
         response = requests.get(
             "https://twitter.com/i/api/2/search/adaptive.json",
             params=self.params,
@@ -112,6 +112,7 @@ class Twitter:
         elif is_quote:
             self.scroll_pointer_quote = scroll_pointer
         else:
+            cursor['cursor'] = scroll_pointer
             self.update_config(cursor)
         return True
 
@@ -212,23 +213,36 @@ class Twitter:
             if not json_data:
                 continue
             self.database.insert_retweet_batch(json_data, tweet)
-            self.database.set_as_fetched_comments(tweet)
+            self.database.set_as_fetched_retweets(tweet)
 
     def get_quotes(self):
         print("[start] get_quotes")
         tweets = self.database.get_tweets_to_quote_fetch()
         for tweet in tweets:
+            print("[progress] tweet")
+            print(tweet['quote_count'])
             if tweet['quote_count'] == 0:
                 self.database.set_as_fetched_quotes(tweet)
                 continue
+            index = 0
+            last_id, last_id_copy = None, None
+            max_quote = 1000 if tweet['quote_count'] > 1000 else tweet['quote_count']
             while True:
-                json_data, is_next = self.make_comment_request(tweet['id'])
+                if index > max_quote / 30:
+                    break
+                index += 1
+                json_data, is_next = self.make_quote_request(tweet['id'])
                 print("[progress] get_quotes")
                 time.sleep(self.interval)
                 if self.end_of_data(json_data):
                     self.scroll_pointer_quote = None
                     break
                 else:
+                    # last_id_copy = last_id
+                    # last_id = list(json_data['globalObjects']['tweets'].values())[0]['id']
+                    # if last_id_copy == last_id:
+                    #     self.scroll_pointer_quote = None
+                    #     break
                     self.database.insert_twitter_batch(json_data, 3)
 
                 if not is_next:

@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 import psycopg2
 import psycopg2.extras
 import nltk
@@ -32,6 +34,8 @@ class Database:
         self.connection.commit()
 
         for tweet in json_data['globalObjects']['tweets'].values():
+            if datetime.strptime(tweet['created_at'], '%a %b %d %H:%M:%S %z %Y').date() < date(2020, 3, 1):
+                continue
             tags = None
             if 'hashtags' in tweet['entities']:
                 for tag in tweet['entities']['hashtags']:
@@ -74,6 +78,8 @@ class Database:
         )
 
     def insert_retweet_batch(self, retweets_json, tweet):
+        if 'timeline' not in retweets_json['data']['retweeters_timeline']:
+            return
         instructions = retweets_json['data']['retweeters_timeline']['timeline']['instructions']
         if len(instructions) == 0:
             return
@@ -94,27 +100,27 @@ class Database:
         return self.db.fetchone() is not None
 
     def get_tweets_to_comment_fetch(self):
-        self.db.execute("SELECT * FROM tweet WHERE reply_to is null and fetched_comments is NULL")
+        self.db.execute("SELECT * FROM tweet WHERE fetched_comments is NULL and type = 1")
         return self.db.fetchall()
 
     def get_tweets_to_retweet_fetch(self):
-        self.db.execute("SELECT * FROM tweet WHERE reply_to is null and fetched_retweets is NULL")
+        self.db.execute("SELECT * FROM tweet WHERE fetched_retweets is NULL and type = 1")
         return self.db.fetchall()
 
     def get_tweets_to_quote_fetch(self):
-        self.db.execute("SELECT * FROM tweet WHERE reply_to is null and fetched_quotes is NULL")
+        self.db.execute("SELECT * FROM tweet WHERE fetched_quotes is NULL and type = 1")
         return self.db.fetchall()
 
     def set_as_fetched_comments(self, tweet):
-        self.db.execute(f"update tweet set fetched_comments = true where id = {tweet['id']} and reply_to is NULL")
+        self.db.execute(f"update tweet set fetched_comments = true where id = {tweet['id']}")
         self.connection.commit()
 
     def set_as_fetched_retweets(self, tweet):
-        self.db.execute(f"update tweet set fetched_retweets = true where id = {tweet['id']} and reply_to is NULL")
+        self.db.execute(f"update tweet set fetched_retweets = true where id = {tweet['id']}")
         self.connection.commit()
 
     def set_as_fetched_quotes(self, tweet):
-        self.db.execute(f"update tweet set fetched_quotes = true where id = {tweet['id']} and reply_to is NULL")
+        self.db.execute(f"update tweet set fetched_quotes = true where id = {tweet['id']}")
         self.connection.commit()
 
     def get_last_date(self):
@@ -122,11 +128,11 @@ class Database:
         return self.db.fetchone()
 
     def get_cursors(self):
-        self.db.execute('select * from "cursor" c order by c."date" desc')
+        self.db.execute('select * from "cursor" c order by c."count" asc')
         return self.db.fetchall()
 
     def create_cursor(self, date):
-        self.db.execute('insert into "cursor" ("date") values (%s)', [date])
+        self.db.execute('insert into "cursor" ("date") values (%s) ON CONFLICT DO NOTHING ', [date])
         self.connection.commit()
 
     def set_cursor(self, date, cursor, count):
