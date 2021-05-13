@@ -28,6 +28,16 @@ from "user" u
          join tweet t on u.id = t.user_id
 where t.type = 1
 order by t.favorite_count desc
+limit 10;
+
+-- top 10 userow którzy otrzymali najwięcej polubień pod swoimi komentarzami
+select u.name, t.favorite_count
+from "user" u
+         join tweet t on u.id = t.user_id
+where t.type = 2
+order by t.favorite_count desc
+limit 10;
+
 
 
 
