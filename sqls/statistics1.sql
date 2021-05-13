@@ -52,3 +52,26 @@ from retweet;
 -- ilosc wszystkich polubień
 select sum(t.favorite_count)
 from tweet t;
+
+-- srednia ilosc komentarzy per tweet
+select avg(t.reply_count)
+from tweet t
+where t.type = 1;
+
+-- srednia ilosc retweetow per tweet
+select avg(t.retweet_count)
+from tweet t
+where t.type = 1;
+
+-- srednia ilosc polubien per tweet
+select avg(t.favorite_count)
+from tweet t
+where t.type = 1;
+
+-- srednia ilosc cytowan per tweet
+select avg(t.quote_count)
+from tweet t
+where t.type = 1;
+
+
+
