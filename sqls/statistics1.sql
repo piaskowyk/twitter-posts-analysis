@@ -73,3 +73,91 @@ select avg(t.quote_count)
 from tweet t
 where t.type = 1;
 
+-- srednia ilosc komentarzy per tweet na dzien
+select avg(t.reply_count) as "Srednia liczba komentarzy na dzien", date_trunc('day', t.created_at) as day
+from tweet t
+where t.type = 1
+group by day
+order by day desc;
+
+-- srednia ilosc komentarzy per tweet na tydzien
+select avg(t.reply_count) as "Srednia liczba komentarzy na tydzien", date_trunc('week', t.created_at) as week
+from tweet t
+where t.type = 1
+group by week
+order by week desc;
+
+-- srednia ilosc komentarzy per tweet na miesiac
+select avg(t.reply_count) as "Srednia liczba komentarzy na miesiac", date_trunc('month', t.created_at) as month
+from tweet t
+where t.type = 1
+group by month
+order by month desc;
+
+
+-- srednia ilosc retweetow per tweet na dzien
+select avg(t.retweet_count) as "Srednia liczba retweetow na dzien", date_trunc('day', t.created_at) as day
+from tweet t
+where t.type = 1
+group by day
+order by day desc;
+
+-- srednia ilosc retweetow per tweet na tydzien
+select avg(t.retweet_count) as "Srednia liczba retweetow na tydzien", date_trunc('week', t.created_at) as week
+from tweet t
+where t.type = 1
+group by week
+order by week desc;
+
+-- srednia ilosc retweetow per tweet na miesiac
+select avg(t.retweet_count) as "Srednia liczba retweetow na miesiac", date_trunc('month', t.created_at) as month
+from tweet t
+where t.type = 1
+group by month
+order by month desc;
+
+
+-- srednia ilosc polubien per tweet na dzien
+select avg(t.favorite_count) as "Srednia liczba polubien na dzien", date_trunc('day', t.created_at) as day
+from tweet t
+where t.type = 1
+group by day
+order by day desc;
+
+-- srednia ilosc polubien per tweet na tydzien
+select avg(t.favorite_count) as "Srednia liczba polubien na tydzien", date_trunc('week', t.created_at) as week
+from tweet t
+where t.type = 1
+group by week
+order by week desc;
+
+-- srednia ilosc polubien per tweet na miesiac
+select avg(t.favorite_count) as "Srednia liczba polubien na miesiac", date_trunc('month', t.created_at) as month
+from tweet t
+where t.type = 1
+group by month
+order by month desc;
+
+
+-- srednia ilosc cytowan per tweet na dzien
+select avg(t.quote_count) as "Srednia liczba cytowan na dzien", date_trunc('day', t.created_at) as day
+from tweet t
+where t.type = 1
+group by day
+order by day desc;
+
+-- srednia ilosc cytowan per tweet na tydzien
+select avg(t.quote_count) as "Srednia liczba cytowan na tydzien", date_trunc('week', t.created_at) as week
+from tweet t
+where t.type = 1
+group by week
+order by week desc;
+
+-- srednia ilosc cytowan per tweet na miesiac
+select avg(t.quote_count) as "Srednia liczba cytowan na miesiac", date_trunc('month', t.created_at) as month
+from tweet t
+where t.type = 1
+group by month
+order by month desc;
+
+
