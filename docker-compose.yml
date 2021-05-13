@@ -3,8 +3,9 @@ version: '3.1'
 services:
   db:
     image: postgres
+    container_name: ed_db
     environment:
-      POSTGRES_USER=root
+      POSTGRES_USER: root
       POSTGRES_PASSWORD: password
     ports:
       - 5432:5432
