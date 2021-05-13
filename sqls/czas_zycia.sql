@@ -12,14 +12,15 @@ with time_diffs as (
 	left join tweet q on t.id = q.reply_to and q."type" = 3
 	where t.reply_count > 100
 )
-select avg(t.diff)
-from time_diffs t
+select avg(t.diff) as "sredni czas zycia tweeta"
+from time_diffs t 
 where t.diff is not null;
 
 -- minimalny czas życia tweeta
 with time_diffs as (
 	select 
 		t.id as t_id,
+		u."name" as user_name,
 		t."content"as t_content,
 		least(
 			(c.created_at::timestamp - t.created_at::timestamp), 
@@ -28,9 +29,10 @@ with time_diffs as (
 	from tweet t
 	left join tweet c on t.id = c.reply_to and c."type" = 2
 	left join tweet q on t.id = q.reply_to and q."type" = 3
+	join "user" u on t.user_id = u.id
 	where t.reply_count > 100
 )
-select distinct t.t_id, t.diff, t.t_content
+select distinct t.t_id, t.diff, t.t_content, t.user_name
 from time_diffs t
 where t.diff is not null
 order by t.diff
@@ -40,6 +42,7 @@ limit 100;
 with time_diffs as (
 	select 
 		t.id as t_id,
+		u."name" as user_name,
 		t."content"as t_content,
 		GREATEST(
 			(c.created_at::timestamp - t.created_at::timestamp), 
@@ -48,9 +51,10 @@ with time_diffs as (
 	from tweet t
 	left join tweet c on t.id = c.reply_to and c."type" = 2
 	left join tweet q on t.id = q.reply_to and q."type" = 3
+	join "user" u on t.user_id = u.id
 	where t.reply_count > 100
 )
-select distinct t.t_id, t.diff, t.t_content
+select distinct t.t_id, t.diff, t.t_content, t.user_name
 from time_diffs t
 where t.diff is not null
 order by t.diff desc
