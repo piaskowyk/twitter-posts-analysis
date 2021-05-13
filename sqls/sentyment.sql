@@ -1,27 +1,29 @@
 -- tweety z największą ilością pozytywnych komentarzy
-select count(t.id), t.*
+select t.reply_count, t."content", date(t.created_at), u."name" 
 from tweet t
 join tweet c on c.reply_to = t.id
+join "user" u on t.user_id = u.id 
 where 
 	t.sentiment_compound >= 0.05 
 	and t.reply_count > 100
 	and t."type" = 1
 	and c."type" = 2
-group by t.id
-order by count(t.id) desc
+group by t.id, u.id
+order by t.reply_count desc
 limit 10;
 
 -- tweety z największą ilością negatywnych komentarzy
-select count(t.id), t.*
+select t.reply_count, t."content", date(t.created_at), u."name" 
 from tweet t
 join tweet c on c.reply_to = t.id
+join "user" u on t.user_id = u.id 
 where 
 	t.sentiment_compound <= -0.05 
 	and t.reply_count > 100
 	and t."type" = 1
 	and c."type" = 2
-group by t.id
-order by count(t.id) desc
+group by t.id, u.id
+order by t.reply_count desc
 limit 10;
 
 -- sentyment tweetów czasie dwa tygodnie przed i po wybranej dacie i pogrupowane per dzień
@@ -34,12 +36,6 @@ group by date(t.created_at);
 
 -- sentyment komentarzy czasie z kubełkiem tydzień/miesiąc
 select avg(t.sentiment_compound), date_trunc('week', t.created_at) as week
-from tweet t
-where t.type = 1
-group by week
-order by week desc;
-
-select avg(t.sentiment_compound), date_trunc('month', t.created_at) as week
 from tweet t
 where t.type = 1
 group by week
