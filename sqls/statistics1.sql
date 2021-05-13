@@ -73,5 +73,3 @@ select avg(t.quote_count)
 from tweet t
 where t.type = 1;
 
-
-
