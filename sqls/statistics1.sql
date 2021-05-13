@@ -161,3 +161,98 @@ group by month
 order by month desc;
 
 
+-- srednia ilosc pozytywnych komentarzy per tweet
+select avg(count)
+from (select count(*) as count
+      from tweet t
+               join tweet t2 on t.id = t2.reply_to
+      where t.type = 1
+        and t2.type = 2
+        and t2.sentiment_compound >= 0.05
+      group by t.id
+      order by count desc) as counts;
+
+-- srednia ilosc negatywnych komentarzy per tweet
+select avg(count)
+from (select count(*) as count
+      from tweet t
+               join tweet t2 on t.id = t2.reply_to
+      where t.type = 1
+        and t2.type = 2
+        and t2.sentiment_compound <= -0.05
+      group by t.id
+      order by count desc) as counts;
+
+
+-- srednia ilosc pozytywnych komentarzy per tweet per dzien
+select avg(count), day
+from (select count(*) as count, date_trunc('day', t.created_at) as day
+      from tweet t
+               join tweet t2 on t.id = t2.reply_to
+      where t.type = 1
+        and t2.type = 2
+        and t2.sentiment_compound >= 0.05
+      group by t.id, day
+      order by count desc) as res
+group by day;
+
+-- srednia ilosc pozytywnych komentarzy per tweet per tydzien
+select avg(count), week
+from (select count(*) as count, date_trunc('week', t.created_at) as week
+      from tweet t
+               join tweet t2 on t.id = t2.reply_to
+      where t.type = 1
+        and t2.type = 2
+        and t2.sentiment_compound >= 0.05
+      group by t.id, week
+      order by count desc) as res
+group by week;
+
+-- srednia ilosc pozytywnych komentarzy per tweet per miesiac
+select avg(count), month
+from (select count(*) as count, date_trunc('month', t.created_at) as month
+      from tweet t
+               join tweet t2 on t.id = t2.reply_to
+      where t.type = 1
+        and t2.type = 2
+        and t2.sentiment_compound >= 0.05
+      group by t.id, month
+      order by count desc) as res
+group by month;
+
+
+-- srednia ilosc negatywnych komentarzy per tweet per dzien
+select avg(count), day
+from (select count(*) as count, date_trunc('day', t.created_at) as day
+      from tweet t
+               join tweet t2 on t.id = t2.reply_to
+      where t.type = 1
+        and t2.type = 2
+        and t2.sentiment_compound <= -0.05
+      group by t.id, day
+      order by count desc) as res
+group by day;
+
+-- srednia ilosc negatywnych komentarzy per tweet per tydzien
+select avg(count), week
+from (select count(*) as count, date_trunc('week', t.created_at) as week
+      from tweet t
+               join tweet t2 on t.id = t2.reply_to
+      where t.type = 1
+        and t2.type = 2
+        and t2.sentiment_compound <= -0.05
+      group by t.id, week
+      order by count desc) as res
+group by week;
+
+-- srednia ilosc negatywnych komentarzy per tweet per miesiac
+select avg(count), month
+from (select count(*) as count, date_trunc('month', t.created_at) as month
+      from tweet t
+               join tweet t2 on t.id = t2.reply_to
+      where t.type = 1
+        and t2.type = 2
+        and t2.sentiment_compound <= -0.05
+      group by t.id, month
+      order by count desc) as res
+group by month;
