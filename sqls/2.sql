@@ -1,24 +1,28 @@
 -- top 10 tweetow z najwieksza iloscia komentarzy
-select t.id as "Identyfikator tweeta", t.content as "Tweet"
+select t.content as "Tweet", u.name as "Nazwa użytkownika", t.reply_count as "Ilość komentarzy"
 from tweet t
+         join "user" u on t.user_id = u.id
 order by reply_count desc
 limit 10;
 
 -- top 10 tweetow z najwieksza iloscia retweetow
-select t.id as "Identyfikator tweeta", t.content as "Tweet"
+select t.content as "Tweet", u.name as "Nazwa użytkownika", t.retweet_count as "Ilość retweetów"
 from tweet t
+         join "user" u on t.user_id = u.id
 order by retweet_count desc
 limit 10;
 
 -- top 10 tweetow z najwieksza iloscia cytowan
-select t.id as "Identyfikator tweeta", t.content as "Tweet"
+select t.content as "Tweet", u.name as "Nazwa użytkownika", t.quote_count as "Ilość cytowań"
 from tweet t
+         join "user" u on t.user_id = u.id
 order by quote_count desc
 limit 10;
 
 -- top 10 tweetow z najwieksza iloscia polubien
-select t.id as "Identyfikator tweeta", t.content as "Tweet"
+select t.content as "Tweet", u.name as "Nazwa użytkownika", t.favorite_count as "Ilość polubień"
 from tweet t
+         join "user" u on t.user_id = u.id
 order by favorite_count desc
 limit 10;
 
