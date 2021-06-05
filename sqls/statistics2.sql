@@ -4,7 +4,8 @@ with tweet_count as (
     from tweet
     where type = 1)
 
-select cast(count(*) as decimal) / (select * from tweet_count) * 100 as "Procent tweetów"
+select ROUND((cast(count(*) as decimal) / (select * from tweet_count) * 100)::numeric,
+             2) as "Procent tweetów, które mają komentarze"
 from tweet
 where type = 1
   and reply_count > 0;
@@ -15,7 +16,8 @@ with tweet_count as (
     from tweet
     where type = 1)
 
-select cast(count(*) as decimal) / (select * from tweet_count) * 100 as "Procent tweetów"
+select ROUND((cast(count(*) as decimal) / (select * from tweet_count) * 100)::numeric,
+             2) as "Procent tweetów, które mają retweety"
 from tweet
 where type = 1
   and retweet_count > 0;
@@ -26,7 +28,8 @@ with tweet_count as (
     from tweet
     where type = 1)
 
-select cast(count(*) as decimal) / (select * from tweet_count) * 100 as "Procent tweetów"
+select ROUND((cast(count(*) as decimal) / (select * from tweet_count) * 100)::numeric,
+             2) as "Procent tweetów, które mają polubienia"
 from tweet
 where type = 1
   and favorite_count > 0;
@@ -37,7 +40,8 @@ with tweet_count as (
     from tweet
     where type = 1)
 
-select cast(count(*) as decimal) / (select * from tweet_count) * 100 as "Procent tweetów"
+select ROUND((cast(count(*) as decimal) / (select * from tweet_count) * 100)::numeric,
+             2) as "Procent tweetów, które mają cytowania"
 from tweet
 where type = 1
   and quote_count > 0;
@@ -48,7 +52,8 @@ with tweet_count as (
     from tweet
     where type = 1)
 
-select cast(count(*) as decimal) / (select * from tweet_count) * 100 as "Procent tweetów"
+select ROUND((cast(count(*) as decimal) / (select * from tweet_count) * 100)::numeric,
+             2) as "Procent tweetów, które mają więcej niż 100 komentarzy"
 from tweet
 where type = 1
   and reply_count > 100;
@@ -59,7 +64,8 @@ with tweet_count as (
     from tweet
     where type = 1)
 
-select cast(count(*) as decimal) / (select * from tweet_count) * 100 as "Procent tweetów"
+select ROUND((cast(count(*) as decimal) / (select * from tweet_count) * 100)::numeric,
+             2) as "Procent tweetów, które mają więcej niż 100 retweetów"
 from tweet
 where type = 1
   and retweet_count > 100;
@@ -70,7 +76,8 @@ with tweet_count as (
     from tweet
     where type = 1)
 
-select cast(count(*) as decimal) / (select * from tweet_count) * 100 as "Procent tweetów"
+select ROUND((cast(count(*) as decimal) / (select * from tweet_count) * 100)::numeric,
+             2) as "Procent tweetów, które mają więcej niż 100 polubień"
 from tweet
 where type = 1
   and favorite_count > 100;
@@ -81,7 +88,8 @@ with tweet_count as (
     from tweet
     where type = 1)
 
-select cast(count(*) as decimal) / (select * from tweet_count) * 100 as "Procent tweetów"
+select ROUND((cast(count(*) as decimal) / (select * from tweet_count) * 100)::numeric,
+             2) as "Procent tweetów, które mają więcej niż 100 cytowań"
 from tweet
 where type = 1
   and quote_count > 100;
