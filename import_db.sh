@@ -1,1 +1,1 @@
-cat zygmunt | docker exec -i ed_db psql -U root
+cat dump | docker exec -i ed_db psql -U root

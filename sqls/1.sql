@@ -61,7 +61,7 @@ order by count(*) desc
 limit 10;
 
 -- top 10 najpopularniejszych tweetow z największą ilością komentarzy + retweetów + cytowań + polubień
-select t.id as "Identyfikator tweeta", t.content, t.reply_count + t.retweet_count + t.quote_count + t.favorite_count as "Suma komentarzy, retweetów cytowań i polubień"
+select t.id as "Identyfikator tweeta", t.content as "Treść tweeta", t.reply_count + t.retweet_count + t.quote_count + t.favorite_count as "Suma komentarzy, retweetów cytowań i polubień"
 from tweet t
 where t.type = 1
 order by "Suma komentarzy, retweetów cytowań i polubień" desc
