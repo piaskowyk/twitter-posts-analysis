@@ -1,9 +1,0 @@
-/mnt/c/Users/mleko/Documents/studia/eksploracja
-
-docker container list
-
-docker cp 7f219516412a:/tmp/test.csv .
-
-Copy (select * from tweet t) To '/tmp/test.csv' With CSV DELIMITER ',' HEADER;
-
-su - postgres

@@ -1,12 +1,7 @@
-default config:
-```json
-{
-  "scroll_pointer_historical": false,
-  "scroll_pointer_latest": false
-}
-```
+# Research of the sentiment of tweets related to COVID-19
 
-Typ w tabeli tweeta:
-1 - tweet
-2 - komentarz
-3 - cytowanie
+## Structure of files
+- `/notebooks` - python scripts to data analises
+- `/results` - results of analises in graphics files
+- `/data_collector` - python script do download data from Twitter
+- `/internal` - internal files of projet
